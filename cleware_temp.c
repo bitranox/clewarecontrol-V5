@@ -122,7 +122,18 @@ int main(int argc, char **argv) {
         if (want_serial && strcmp(s, want_serial) != 0)
             continue;
         snprintf(path, sizeof(path), "%s", cur->path);
-        snprintf(serial, sizeof(serial), "%s", s);
+        /* The serial comes from the USB string descriptor, i.e. it is
+         * attacker-controllable if a rogue device is attached, and it is emitted
+         * as an InfluxDB line-protocol tag. Restrict it to [0-9A-Za-z] so it
+         * cannot inject extra tags/fields or lines (spaces, commas, '=', '\n').
+         * Real Cleware serials are hex, so this is lossless in practice. */
+        size_t j = 0;
+        for (size_t k = 0; s[k] && j < sizeof(serial) - 1; k++) {
+            unsigned char c = (unsigned char)s[k];
+            if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
+                serial[j++] = (char)c;
+        }
+        serial[j] = '\0';
     }
     hid_free_enumeration(devs);
     if (!path[0]) {
