@@ -23,6 +23,15 @@ result, are the maintainer's. The work was done on 2026-05-29.
   the host's on-board thermistors (≈ 26 °C) and the reader has run live feeding a
   Telegraf → InfluxDB pipeline. This is the part that actually matters, and it was
   the maintainer's call on what counted as "correct".
+- **Drove the security review** — the maintainer specifically asked whether the code
+  was exploitable, which prompted a deliberate pass over the attack surface: buffer
+  and bounds handling, argument parsing, format strings, and the data coming back from
+  the USB device. That review found that a rogue device could put arbitrary text in its
+  USB serial string, which was emitted unescaped as an InfluxDB line-protocol tag — an
+  injection vector. At the maintainer's direction it was fixed (the serial is now
+  restricted to `[0-9A-Za-z]`), and the trust model is written up in
+  [SECURITY.md](SECURITY.md). The remaining call on acceptable risk (e.g. running via
+  `sudo` vs a udev rule) was the maintainer's.
 - **Reviewed every change** and **maintains and answers for the result**.
 
 ## Where AI helped
