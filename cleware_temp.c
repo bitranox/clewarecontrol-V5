@@ -82,8 +82,10 @@ static int find_device(const char *want_serial,
             continue;
         char s[64] = "";
         if (cur->serial_number) {
-            wcstombs(s, cur->serial_number, sizeof(s) - 1);
-            s[sizeof(s) - 1] = '\0';
+            if (wcstombs(s, cur->serial_number, sizeof(s) - 1) == (size_t)-1)
+                s[0] = '\0';   /* undecodable serial -> treat as none */
+            else
+                s[sizeof(s) - 1] = '\0';
         }
         if (want_serial && strcmp(s, want_serial) != 0)
             continue;
