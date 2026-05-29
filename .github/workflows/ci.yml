@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: build & test (${{ matrix.cc }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    env:
+      CC: ${{ matrix.cc }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ${{ matrix.cc }} make pkg-config libhidapi-dev libhidapi-libusb0
+
+      - name: Build (warnings are errors)
+        run: make EXTRA_CFLAGS=-Werror
+
+      - name: Unit tests (decode)
+        run: make check EXTRA_CFLAGS=-Werror
+
+      - name: CLI smoke test (no hardware in CI)
+        run: |
+          ./cleware_temp --version
+          ./cleware_temp --help
+          # With no sensor attached the tool must fail cleanly with exit code 3.
+          if ./cleware_temp; then
+            echo "expected failure with no device attached"; exit 1
+          else
+            rc=$?
+            echo "no-device exit code: $rc"
+            test "$rc" -eq 3
+          fi
+
+      - name: Verify install/uninstall
+        run: |
+          sudo make install
+          test -x /usr/local/bin/cleware_temp
+          sudo make uninstall
+          test ! -e /usr/local/bin/cleware_temp

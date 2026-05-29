@@ -1,5 +1,6 @@
 # build artifacts
 cleware_temp
+tests/test_decode
 *.o
 
 # IDE

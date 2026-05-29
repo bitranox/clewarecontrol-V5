@@ -42,6 +42,8 @@
 #include <unistd.h>
 #include <hidapi/hidapi.h>
 
+#include "cleware_decode.h"
+
 #ifndef CLEWARE_TEMP_VERSION
 #define CLEWARE_TEMP_VERSION "1.0.0"
 #endif
@@ -59,17 +61,6 @@
 static int cmp_double(const void *a, const void *b) {
     double d = *(const double *)a - *(const double *)b;
     return (d > 0) - (d < 0);
-}
-
-/* Decode a 6-byte Cleware USB-Temp v5 frame. Returns 0 on success. */
-static int decode(const unsigned char *buf, double *out) {
-    if (!(buf[0] & 0x80))                            /* valid bit */
-        return -1;
-    int v = ((buf[2] & 0x7f) << 5) | (buf[3] >> 3);  /* 12-bit value */
-    if (v & 0x800)                                   /* 12-bit two's complement */
-        v -= 0x1000;
-    *out = v * 0.0625;
-    return 0;
 }
 
 static void usage(const char *argv0) {
@@ -166,7 +157,7 @@ int main(int argc, char **argv) {
             continue;
         if (hid_read_timeout(h, buf, 6, READ_TIMEOUT) < 6)
             continue;
-        if (decode(buf, &t) != 0)
+        if (cleware_decode(buf, &t) != 0)
             continue;
         if (t < TEMP_MIN || t > TEMP_MAX)
             continue;

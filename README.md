@@ -1,5 +1,7 @@
 # clewarecontrol-V5 (`cleware_temp`)
 
+[![CI](https://github.com/bitranox/clewarecontrol-V5/actions/workflows/ci.yml/badge.svg)](https://github.com/bitranox/clewarecontrol-V5/actions/workflows/ci.yml)
+
 A tiny, dependency-light Linux reader for the **Cleware USB-Temp** temperature
 sensor with **firmware version 5**, where the classic
 [`clewarecontrol`](https://github.com/xrobau/clewarecontrol) tool reports a
@@ -80,6 +82,20 @@ Or use the convenience installer (also sets up Telegraf sudo access with
 ```bash
 sudo ./install.sh --telegraf
 ```
+
+## Testing
+
+The decode logic lives in [`cleware_decode.h`](cleware_decode.h) and is covered
+by hardware-free unit tests (known frames → expected °C, including the v5
+status-bit case that trips up `clewarecontrol`):
+
+```bash
+make check
+```
+
+CI (GitHub Actions, see [`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+builds with `gcc` and `clang` using `-Werror`, runs the unit tests, checks the
+CLI and the no-device exit code, and verifies `make install` / `uninstall`.
 
 ## Usage
 
@@ -165,7 +181,8 @@ frame layouts and are out of scope.
 
 ## AI transparency
 
-See [ai-stance.md](ai-stance.md).
+This project was built with AI assistance. See [ai-disclosure.md](ai-disclosure.md)
+for exactly how, and [ai-stance.md](ai-stance.md) for the reasoning behind it.
 
 ## License
 

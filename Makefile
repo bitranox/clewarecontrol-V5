@@ -1,11 +1,14 @@
 # cleware_temp — Makefile
 #
 # Build:    make
-# Install:  sudo make install            (binary -> $(PREFIX)/bin)
+# Test:     make check                    (unit tests, no hardware needed)
+# Install:  sudo make install             (binary -> $(PREFIX)/bin)
 # Remove:   sudo make uninstall
 #
 # Honors DESTDIR and PREFIX for packaging, e.g.:
 #   make install DESTDIR=/tmp/pkg PREFIX=/usr
+# Add flags without clobbering the defaults, e.g. in CI:
+#   make EXTRA_CFLAGS=-Werror
 
 VERSION  := 1.0.0
 PREFIX   ?= /usr/local
@@ -13,21 +16,30 @@ BINDIR   := $(PREFIX)/bin
 
 CC       ?= cc
 PKGS     := hidapi-libusb
-CFLAGS   ?= -O2 -Wall -Wextra
-CFLAGS   += -DCLEWARE_TEMP_VERSION=\"$(VERSION)\" $(shell pkg-config --cflags $(PKGS))
+WARNINGS ?= -O2 -Wall -Wextra
+CFLAGS   += $(WARNINGS) $(EXTRA_CFLAGS) -DCLEWARE_TEMP_VERSION=\"$(VERSION)\" \
+            $(shell pkg-config --cflags $(PKGS))
 LDLIBS   += $(shell pkg-config --libs $(PKGS))
+
+# the unit tests are pure (no hidapi) so they compile/link standalone
+TESTCFLAGS ?= -O2 -Wall -Wextra $(EXTRA_CFLAGS)
 
 BIN      := cleware_temp
 
-.PHONY: all clean install uninstall test
+.PHONY: all clean check install uninstall test
 
 all: $(BIN)
 
-$(BIN): cleware_temp.c
+$(BIN): cleware_temp.c cleware_decode.h
 	$(CC) $(CFLAGS) $< -o $@ $(LDLIBS)
 
+# unit tests — no sensor required, runs anywhere (used by CI)
+check: tests/test_decode.c cleware_decode.h
+	$(CC) $(TESTCFLAGS) tests/test_decode.c -o tests/test_decode
+	./tests/test_decode
+
 clean:
-	rm -f $(BIN)
+	rm -f $(BIN) tests/test_decode
 
 install: $(BIN)
 	install -d $(DESTDIR)$(BINDIR)
@@ -36,6 +48,6 @@ install: $(BIN)
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(BIN)
 
-# quick smoke test against an attached sensor
+# quick smoke test against an attached sensor (needs the hardware)
 test: $(BIN)
 	./$(BIN) --plain
