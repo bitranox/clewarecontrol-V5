@@ -18,6 +18,22 @@ $ cleware_temp --plain
 26.3125
 ```
 
+## Platform
+
+**Linux only.** It talks to the sensor through the hidapi **libusb** backend and
+the device-access setup (sudo / udev) is Linux-specific. It should build and run
+on any modern Linux distribution with hidapi installed; it has **not** been tested
+on Windows or macOS.
+
+Developed and tested on:
+
+| Component | Tested with                                                     |
+|-----------|-----------------------------------------------------------------|
+| OS        | Debian 13 (trixie), x86_64                                      |
+| Kernel    | Linux 7.0.2                                                     |
+| hidapi    | 0.14.0 (`hidapi-libusb`)                                        |
+| Compilers | gcc 14.2.0 (build host); CI: gcc 13.2.0 + clang 18.0, `-Werror` |
+
 ## The problem with stock clewarecontrol on firmware v5
 
 The Cleware USB-Temp (USB `0d50:0010`, HID device type `0x10`) exists in several
