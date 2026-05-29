@@ -163,6 +163,10 @@ The decode has been verified on a firmware-v5 device (type `0x10`); other Clewar
 temperature variants (USB-Temp2 `0x11`, Temp5 `0x15`, USB-Humidity) use different
 frame layouts and are out of scope.
 
+## AI transparency
+
+See [ai-stance.md](ai-stance.md).
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

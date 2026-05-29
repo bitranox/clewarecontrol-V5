@@ -1,3 +1,6 @@
 # build artifacts
 cleware_temp
 *.o
+
+# IDE
+.idea/
