@@ -1,0 +1,12 @@
+# Grant non-root access to the Cleware USB-Temp so a service user (e.g. the
+# `telegraf` user) can read it via libusb WITHOUT sudo.
+#
+# Install:
+#   sudo install -m 0644 examples/udev/99-cleware-usbtemp.rules \
+#        /etc/udev/rules.d/99-cleware-usbtemp.rules
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+#   # make sure the service user is in the group below, e.g.:
+#   sudo usermod -aG plugdev telegraf   # then restart telegraf
+#
+# Change GROUP to whatever group your reader process belongs to.
+SUBSYSTEM=="usb", ATTR{idVendor}=="0d50", ATTR{idProduct}=="0010", MODE="0660", GROUP="plugdev"

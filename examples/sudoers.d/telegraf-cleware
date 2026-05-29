@@ -1,0 +1,5 @@
+# Allow the telegraf user to run cleware_temp via sudo without a password.
+# Install as /etc/sudoers.d/telegraf-cleware with mode 0440, e.g.:
+#   sudo install -m 0440 examples/sudoers.d/telegraf-cleware /etc/sudoers.d/telegraf-cleware
+#   sudo visudo -cf /etc/sudoers.d/telegraf-cleware
+telegraf ALL=(ALL) NOPASSWD: /usr/local/bin/cleware_temp
