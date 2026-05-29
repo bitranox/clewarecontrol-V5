@@ -179,6 +179,11 @@ The decode has been verified on a firmware-v5 device (type `0x10`); other Clewar
 temperature variants (USB-Temp2 `0x11`, Temp5 `0x15`, USB-Humidity) use different
 frame layouts and are out of scope.
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for the security model, how untrusted USB-device
+data is handled, and how to report a vulnerability.
+
 ## AI transparency
 
 This project was built with AI assistance. See [ai-disclosure.md](ai-disclosure.md)
