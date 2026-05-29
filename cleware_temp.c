@@ -46,7 +46,7 @@
 #include "cleware_serial.h"
 
 #ifndef CLEWARE_TEMP_VERSION
-#define CLEWARE_TEMP_VERSION "1.0.1"
+#define CLEWARE_TEMP_VERSION "1.0.2"
 #endif
 
 #define CLEWARE_VID   0x0d50
