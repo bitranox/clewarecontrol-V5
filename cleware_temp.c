@@ -211,11 +211,12 @@ int main(int argc, char **argv) {
 
     if (plain) {
         printf("%.4f\n", temp);
-    } else if (serial[0]) {
-        /* Telegraf appends the global `host` tag and the timestamp. */
-        printf("cleware_temp,sensor=usbtemp,serial=%s temperature=%.4f\n", serial, temp);
     } else {
-        printf("cleware_temp,sensor=usbtemp temperature=%.4f\n", temp);
+        char serial_tag[80] = "";
+        if (serial[0])   /* serial is sanitized to [0-9A-Za-z] and <= 63 chars */
+            snprintf(serial_tag, sizeof(serial_tag), ",serial=%s", serial);
+        /* Telegraf appends the global `host` tag and the timestamp. */
+        printf("cleware_temp,sensor=usbtemp%s temperature=%.4f\n", serial_tag, temp);
     }
     return 0;
 }
