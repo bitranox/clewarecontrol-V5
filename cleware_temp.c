@@ -64,6 +64,73 @@ static int cmp_double(const void *a, const void *b) {
     return (d > 0) - (d < 0);
 }
 
+/*
+ * Find the first Cleware USB-Temp (optionally matching `want_serial`). On
+ * success fills `path` (for hid_open_path) and `serial` (sanitized for output)
+ * and returns 1; returns 0 if no matching device is present.
+ */
+static int find_device(const char *want_serial,
+                       char *path, size_t pathsz,
+                       char *serial, size_t serialsz) {
+    struct hid_device_info *devs = hid_enumerate(CLEWARE_VID, 0x0), *cur;
+    int found = 0;
+
+    path[0] = '\0';
+    serial[0] = '\0';
+    for (cur = devs; cur && !found; cur = cur->next) {
+        if (cur->product_id != CLEWARE_TEMP)
+            continue;
+        char s[64] = "";
+        if (cur->serial_number) {
+            wcstombs(s, cur->serial_number, sizeof(s) - 1);
+            s[sizeof(s) - 1] = '\0';
+        }
+        if (want_serial && strcmp(s, want_serial) != 0)
+            continue;
+        snprintf(path, pathsz, "%s", cur->path);
+        /* The serial is attacker-controllable (USB string descriptor) and is
+         * emitted as an InfluxDB line-protocol tag — sanitize it to [0-9A-Za-z]
+         * so it cannot inject tags/fields/lines. See cleware_serial.h. */
+        cleware_sanitize_serial(serial, serialsz, s);
+        found = 1;
+    }
+    hid_free_enumeration(devs);
+    return found;
+}
+
+/*
+ * Collect up to SAMPLES valid, in-range frames from an open device and write
+ * their median to *out. Returns 0 on success, -1 if no valid reading was
+ * obtained (e.g. the device only ever returned frames with the valid bit clear).
+ */
+static int read_temperature(hid_device *h, double *out) {
+    double samples[SAMPLES];
+    int n = 0;
+    unsigned char seq = 0;
+
+    for (int i = 0; i < MAX_TRIES && n < SAMPLES; i++) {
+        unsigned char fr[3] = { 0x00, seq++, 0x81 };
+        unsigned char buf[8] = { 0 };
+        double t;
+        if (hid_send_feature_report(h, fr, sizeof fr) < 0)
+            continue;
+        if (hid_read_timeout(h, buf, 6, READ_TIMEOUT) < 6)
+            continue;
+        if (cleware_decode(buf, &t) != 0)
+            continue;
+        if (t < TEMP_MIN || t > TEMP_MAX)
+            continue;
+        samples[n++] = t;
+        usleep(50000);
+    }
+    if (n == 0)
+        return -1;
+
+    qsort(samples, n, sizeof(double), cmp_double);
+    *out = samples[n / 2];   /* median is robust to the odd bad frame */
+    return 0;
+}
+
 static void usage(const char *argv0) {
     printf(
         "cleware_temp %s — read a Cleware USB-Temp (firmware v5) sensor\n"
@@ -108,28 +175,9 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    /* locate the first matching Cleware USB-Temp device */
-    struct hid_device_info *devs = hid_enumerate(CLEWARE_VID, 0x0), *cur;
-    char path[512] = "";
-    char serial[64] = "";
-    for (cur = devs; cur; cur = cur->next) {
-        if (cur->product_id != CLEWARE_TEMP || path[0])
-            continue;
-        char s[64] = "";
-        if (cur->serial_number) {
-            wcstombs(s, cur->serial_number, sizeof(s) - 1);
-            s[sizeof(s) - 1] = '\0';
-        }
-        if (want_serial && strcmp(s, want_serial) != 0)
-            continue;
-        snprintf(path, sizeof(path), "%s", cur->path);
-        /* The serial is attacker-controllable (USB string descriptor) and is
-         * emitted as an InfluxDB line-protocol tag — sanitize it to [0-9A-Za-z]
-         * so it cannot inject tags/fields/lines. See cleware_serial.h. */
-        cleware_sanitize_serial(serial, sizeof(serial), s);
-    }
-    hid_free_enumeration(devs);
-    if (!path[0]) {
+    char path[512];
+    char serial[64];
+    if (!find_device(want_serial, path, sizeof(path), serial, sizeof(serial))) {
         if (want_serial)
             fprintf(stderr, "cleware_temp: no Cleware USB-Temp with serial %s found\n", want_serial);
         else
@@ -150,35 +198,14 @@ int main(int argc, char **argv) {
         return 4;
     }
 
-    double samples[SAMPLES];
-    int n = 0;
-    unsigned char seq = 0;
-    for (int i = 0; i < MAX_TRIES && n < SAMPLES; i++) {
-        unsigned char fr[3] = { 0x00, seq++, 0x81 };
-        unsigned char buf[8] = { 0 };
-        double t;
-        if (hid_send_feature_report(h, fr, sizeof fr) < 0)
-            continue;
-        if (hid_read_timeout(h, buf, 6, READ_TIMEOUT) < 6)
-            continue;
-        if (cleware_decode(buf, &t) != 0)
-            continue;
-        if (t < TEMP_MIN || t > TEMP_MAX)
-            continue;
-        samples[n++] = t;
-        usleep(50000);
-    }
-
+    double temp;
+    int rc = read_temperature(h, &temp);
     hid_close(h);
     hid_exit();
-
-    if (n == 0) {
+    if (rc != 0) {
         fprintf(stderr, "cleware_temp: no valid reading\n");
         return 5;
     }
-
-    qsort(samples, n, sizeof(double), cmp_double);
-    double temp = samples[n / 2];   /* median is robust to the odd bad frame */
 
     if (plain) {
         printf("%.4f\n", temp);
