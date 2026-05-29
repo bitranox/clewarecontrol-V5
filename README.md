@@ -2,14 +2,14 @@
 
 [![CI](https://github.com/bitranox/clewarecontrol-V5/actions/workflows/ci.yml/badge.svg)](https://github.com/bitranox/clewarecontrol-V5/actions/workflows/ci.yml)
 
-A tiny, dependency-light Linux reader for the **Cleware USB-Temp** temperature
-sensor with **firmware version 5**, where the classic
-[`clewarecontrol`](https://github.com/xrobau/clewarecontrol) tool reports a
-fixed bogus value (≈ **−229 °C**).
+A small Linux reader for the Cleware USB-Temp temperature sensor on firmware
+version 5, where the classic
+[`clewarecontrol`](https://github.com/xrobau/clewarecontrol) tool reports a fixed
+bogus value (about -229 °C).
 
-`cleware_temp` reads the sensor over USB-HID and prints the temperature either
-as **InfluxDB line protocol** (default — drop-in for Telegraf's `exec` input) or
-as a **plain number**.
+`cleware_temp` reads the sensor over USB-HID and prints the temperature, either as
+InfluxDB line protocol (the default, a drop-in for Telegraf's `exec` input) or as a
+plain number.
 
 ```console
 $ cleware_temp
@@ -20,10 +20,10 @@ $ cleware_temp --plain
 
 ## Platform
 
-**Linux only.** It talks to the sensor through the hidapi **libusb** backend and
-the device-access setup (sudo / udev) is Linux-specific. It should build and run
-on any modern Linux distribution with hidapi installed; it has **not** been tested
-on Windows or macOS.
+Linux only. It talks to the sensor through the hidapi libusb backend, and the
+device-access setup (sudo or udev) is Linux-specific. It should build and run on
+any modern Linux distribution that has hidapi installed. It has not been tested on
+Windows or macOS.
 
 Developed and tested on:
 
@@ -45,11 +45,11 @@ if (value & 0x1000) value -= 0x1000;     // bit 12 = sign
 temp  = value * 0.0625;
 ```
 
-On **firmware v5** that is wrong. Byte 2 bit 7 is a **status flag**, not data,
-and the temperature is a **12-bit signed** field. With byte 2 = `0x8d`, bit 7 is
-set, so the old code mistakes the reading for a large negative number and prints
-a constant ≈ −229 °C. The correct decode masks that bit and uses 12-bit
-two's-complement (the 0.0625 °C step is documented in the Cleware manual):
+On firmware v5 that is wrong. Byte 2 bit 7 is a status flag, not data, and the
+temperature is a 12-bit signed field. When byte 2 is `0x8d`, bit 7 is set, so the
+old code reads it as a large negative number and prints a constant near -229 °C.
+The correct decode masks that bit and uses 12-bit two's-complement (the Cleware
+manual documents the 0.0625 °C step):
 
 ```c
 v = ((buf[2] & 0x7f) << 5) | (buf[3] >> 3);   // 12-bit value
@@ -57,9 +57,8 @@ if (v & 0x800) v -= 0x1000;                    // 12-bit signed
 tempC = v * 0.0625;
 ```
 
-Example frame `ae 51 8d 2b 00 00` → `((0x8d & 0x7f)<<5) | (0x2b>>3)` =
-`(13<<5)|5` = `421` → `421 × 0.0625` = **26.3125 °C** — matching a reference
-thermometer.
+Example frame `ae 51 8d 2b 00 00`: `((0x8d & 0x7f)<<5) | (0x2b>>3)` = `(13<<5)|5`
+= `421`, so `421 × 0.0625` = 26.3125 °C, which matches a reference thermometer.
 
 ### HID frame layout (6-byte input report)
 
@@ -71,13 +70,13 @@ thermometer.
 | 3    | bits 7..3 = temperature low bits (bits 2..0 unused)    |
 | 4, 5 | 0                                                      |
 
-Read sequence: send the 3-byte HID **feature report** `{0x00, seq, 0x81}`, then
-read the 6-byte input report. `cleware_temp` takes the **median of several valid
-frames** and applies a −30…+90 °C sanity window.
+Read sequence: send the 3-byte HID feature report `{0x00, seq, 0x81}`, then read
+the 6-byte input report. `cleware_temp` takes the median of several valid frames
+and applies a -30 to +90 °C sanity window.
 
 ## Build
 
-Requires a C compiler and **hidapi** (libusb backend).
+Requires a C compiler and hidapi (the libusb backend).
 
 Debian / Ubuntu:
 
@@ -101,10 +100,10 @@ sudo ./install.sh --telegraf
 
 ## Testing
 
-The decode logic ([`cleware_decode.h`](cleware_decode.h)) and the serial
-sanitizer ([`cleware_serial.h`](cleware_serial.h)) are covered by hardware-free
-unit tests — known frames → expected °C (including the v5 status-bit case that
-trips up `clewarecontrol`), and serial inputs → injection-safe output:
+The decode logic ([`cleware_decode.h`](cleware_decode.h)) and the serial sanitizer
+([`cleware_serial.h`](cleware_serial.h)) have hardware-free unit tests: known
+frames checked against expected °C (including the v5 status-bit case that trips up
+`clewarecontrol`), and serial inputs checked for injection-safe output.
 
 ```bash
 make check
@@ -139,15 +138,15 @@ lsusb -d 0d50:0010 -v 2>/dev/null | grep iSerial
 `cleware_temp` talks to the device through libusb, which needs access to the USB
 device node (root by default). For a service such as Telegraf, pick one:
 
-- **sudo** (simplest): install
+- sudo (simplest): install
   [`examples/sudoers.d/telegraf-cleware`](examples/sudoers.d/telegraf-cleware)
   to `/etc/sudoers.d/telegraf-cleware` (mode `0440`) and call
   `sudo /usr/local/bin/cleware_temp`.
-- **udev** (least privilege): install
+- udev (least privilege): install
   [`examples/udev/99-cleware-usbtemp.rules`](examples/udev/99-cleware-usbtemp.rules),
   reload udev, add the service user to the group, and call the binary directly.
 
-## Telegraf → InfluxDB
+## Telegraf and InfluxDB
 
 Use [`examples/telegraf/cleware_temp.conf`](examples/telegraf/cleware_temp.conf)
 (copy into `/etc/telegraf/telegraf.d/`):
@@ -159,9 +158,10 @@ Use [`examples/telegraf/cleware_temp.conf`](examples/telegraf/cleware_temp.conf)
   data_format = "influx"
 ```
 
-The measurement is `cleware_temp`, field `temperature`, tags `sensor=usbtemp`
-and `serial=…`; Telegraf adds the global `host` tag and the timestamp. If your
-`influxdb_v2` output uses a `namepass` allow-list, add `"cleware_temp"` to it.
+The measurement is `cleware_temp`, the field is `temperature`, and the tags are
+`sensor=usbtemp` and `serial=...`. Telegraf adds the global `host` tag and the
+timestamp. If your `influxdb_v2` output uses a `namepass` allow-list, add
+`"cleware_temp"` to it.
 
 Verify the data arrived (Flux):
 
@@ -180,18 +180,18 @@ or systemd timer.
 
 ## Troubleshooting
 
-| Symptom                                 | Cause / fix                                                                                                 |
-|-----------------------------------------|-------------------------------------------------------------------------------------------------------------|
-| `no Cleware USB-Temp (0d50:0010) found` | sensor not plugged in, or you filtered by a serial that doesn't match (`lsusb -d 0d50:0010`)                |
-| `hid_open_path(...) failed` (exit 4)    | permissions (see *Device access*), or a transient libusb/kernel race — the tool already retries a few times |
-| `no valid reading` (exit 5)             | device returned only frames with the valid bit clear; check the cable/USB port                              |
-| reads ≈ −229 °C with `clewarecontrol`   | that's exactly the v5 bug this tool fixes — use `cleware_temp`                                              |
+| Symptom                                   | Cause / fix                                                                                                 |
+|-------------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| `no Cleware USB-Temp (0d50:0010) found`   | sensor not plugged in, or you filtered by a serial that doesn't match (`lsusb -d 0d50:0010`)                |
+| `hid_open_path(...) failed` (exit 4)      | permissions (see *Device access*), or a transient libusb/kernel race (the tool already retries a few times) |
+| `no valid reading` (exit 5)               | device returned only frames with the valid bit clear; check the cable/USB port                              |
+| reads about -229 °C with `clewarecontrol` | that's the v5 bug this tool fixes; use `cleware_temp`                                                       |
 
 ## Notes / scope
 
-This tool deliberately does **one thing**: read temperature from the USB-Temp on
+This tool does one thing on purpose: read temperature from the USB-Temp on
 firmware v5. It is an independent reimplementation based on the HID protocol, not
-a fork of `clewarecontrol`, and does not control switches, watchdogs, LEDs, etc.
+a fork of `clewarecontrol`, and it doesn't control switches, watchdogs, or LEDs.
 The decode has been verified on a firmware-v5 device (type `0x10`); other Cleware
 temperature variants (USB-Temp2 `0x11`, Temp5 `0x15`, USB-Humidity) use different
 frame layouts and are out of scope.
@@ -208,4 +208,4 @@ for exactly how, and [ai-stance.md](ai-stance.md) for the reasoning behind it.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
