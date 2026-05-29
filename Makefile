@@ -30,16 +30,18 @@ BIN      := cleware_temp
 
 all: $(BIN)
 
-$(BIN): cleware_temp.c cleware_decode.h
+$(BIN): cleware_temp.c cleware_decode.h cleware_serial.h
 	$(CC) $(CFLAGS) $< -o $@ $(LDLIBS)
 
 # unit tests — no sensor required, runs anywhere (used by CI)
-check: tests/test_decode.c cleware_decode.h
+check: tests/test_decode.c tests/test_serial.c cleware_decode.h cleware_serial.h
 	$(CC) $(TESTCFLAGS) tests/test_decode.c -o tests/test_decode
 	./tests/test_decode
+	$(CC) $(TESTCFLAGS) tests/test_serial.c -o tests/test_serial
+	./tests/test_serial
 
 clean:
-	rm -f $(BIN) tests/test_decode
+	rm -f $(BIN) tests/test_decode tests/test_serial
 
 install: $(BIN)
 	install -d $(DESTDIR)$(BINDIR)

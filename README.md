@@ -101,9 +101,10 @@ sudo ./install.sh --telegraf
 
 ## Testing
 
-The decode logic lives in [`cleware_decode.h`](cleware_decode.h) and is covered
-by hardware-free unit tests (known frames → expected °C, including the v5
-status-bit case that trips up `clewarecontrol`):
+The decode logic ([`cleware_decode.h`](cleware_decode.h)) and the serial
+sanitizer ([`cleware_serial.h`](cleware_serial.h)) are covered by hardware-free
+unit tests — known frames → expected °C (including the v5 status-bit case that
+trips up `clewarecontrol`), and serial inputs → injection-safe output:
 
 ```bash
 make check

@@ -43,6 +43,7 @@
 #include <hidapi/hidapi.h>
 
 #include "cleware_decode.h"
+#include "cleware_serial.h"
 
 #ifndef CLEWARE_TEMP_VERSION
 #define CLEWARE_TEMP_VERSION "1.0.0"
@@ -122,18 +123,10 @@ int main(int argc, char **argv) {
         if (want_serial && strcmp(s, want_serial) != 0)
             continue;
         snprintf(path, sizeof(path), "%s", cur->path);
-        /* The serial comes from the USB string descriptor, i.e. it is
-         * attacker-controllable if a rogue device is attached, and it is emitted
-         * as an InfluxDB line-protocol tag. Restrict it to [0-9A-Za-z] so it
-         * cannot inject extra tags/fields or lines (spaces, commas, '=', '\n').
-         * Real Cleware serials are hex, so this is lossless in practice. */
-        size_t j = 0;
-        for (size_t k = 0; s[k] && j < sizeof(serial) - 1; k++) {
-            unsigned char c = (unsigned char)s[k];
-            if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
-                serial[j++] = (char)c;
-        }
-        serial[j] = '\0';
+        /* The serial is attacker-controllable (USB string descriptor) and is
+         * emitted as an InfluxDB line-protocol tag — sanitize it to [0-9A-Za-z]
+         * so it cannot inject tags/fields/lines. See cleware_serial.h. */
+        cleware_sanitize_serial(serial, sizeof(serial), s);
     }
     hid_free_enumeration(devs);
     if (!path[0]) {
