@@ -5,10 +5,10 @@
 This is a small single-purpose tool. Security fixes are applied to the latest
 release / `master`; please run a current version before reporting.
 
-| Version | Supported |
-|---------|-----------|
-| `master` / latest `1.x` | ✅ |
-| older | ❌ |
+| Version                 | Supported |
+|-------------------------|-----------|
+| `master` / latest `1.x` | ✅         |
+| older                   | ❌         |
 
 ## Reporting a vulnerability
 

@@ -47,13 +47,13 @@ thermometer.
 
 ### HID frame layout (6-byte input report)
 
-| byte | meaning |
-|------|---------|
-| 0 | bit 7 = valid flag, bits 6..0 = time high |
-| 1 | time low |
-| 2 | bit 7 = status flag, bits 6..0 = temperature high bits |
-| 3 | bits 7..3 = temperature low bits (bits 2..0 unused) |
-| 4, 5 | 0 |
+| byte | meaning                                                |
+|------|--------------------------------------------------------|
+| 0    | bit 7 = valid flag, bits 6..0 = time high              |
+| 1    | time low                                               |
+| 2    | bit 7 = status flag, bits 6..0 = temperature high bits |
+| 3    | bits 7..3 = temperature low bits (bits 2..0 unused)    |
+| 4, 5 | 0                                                      |
 
 Read sequence: send the 3-byte HID **feature report** `{0x00, seq, 0x81}`, then
 read the 6-byte input report. `cleware_temp` takes the **median of several valid
@@ -163,12 +163,12 @@ or systemd timer.
 
 ## Troubleshooting
 
-| Symptom | Cause / fix |
-|---------|-------------|
-| `no Cleware USB-Temp (0d50:0010) found` | sensor not plugged in, or you filtered by a serial that doesn't match (`lsusb -d 0d50:0010`) |
-| `hid_open_path(...) failed` (exit 4) | permissions (see *Device access*), or a transient libusb/kernel race — the tool already retries a few times |
-| `no valid reading` (exit 5) | device returned only frames with the valid bit clear; check the cable/USB port |
-| reads ≈ −229 °C with `clewarecontrol` | that's exactly the v5 bug this tool fixes — use `cleware_temp` |
+| Symptom                                 | Cause / fix                                                                                                 |
+|-----------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| `no Cleware USB-Temp (0d50:0010) found` | sensor not plugged in, or you filtered by a serial that doesn't match (`lsusb -d 0d50:0010`)                |
+| `hid_open_path(...) failed` (exit 4)    | permissions (see *Device access*), or a transient libusb/kernel race — the tool already retries a few times |
+| `no valid reading` (exit 5)             | device returned only frames with the valid bit clear; check the cable/USB port                              |
+| reads ≈ −229 °C with `clewarecontrol`   | that's exactly the v5 bug this tool fixes — use `cleware_temp`                                              |
 
 ## Notes / scope
 
