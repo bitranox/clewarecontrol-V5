@@ -6,3 +6,6 @@ tests/test_serial
 
 # IDE
 .idea/
+
+# Local, per-developer settings (Claude Code etc.) - never commit
+*.local.json
